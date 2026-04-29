@@ -2,140 +2,165 @@ import streamlit as st
 import numpy as np
 import pickle
 import os
+import pandas as pd
+import plotly.express as px
 
-# ─── PAGE CONFIG ─────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ─────────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="Job Hiring Predictor AI",
-    page_icon="🎯",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    page_title="Prédicteur d’Embauche  Maroc",
+    page_icon="",
+    layout="wide"
 )
 
-# ─── SESSION STATE INIT ──────────────────────────────────────
-defaults = {
-    "branch": "CSE",
-    "college_tier": 1,
-    "cgpa": 7.0,
-    "backlogs": 0,
-    "aptitude_score": 50,
-    "coding_skills": 5,
-    "dsa_score": 50,
-    "ml_knowledge": 5,
-    "system_design": 5,
-    "communication_skills": 5,
-    "internships": 0,
-    "projects_count": 1,
-    "certifications": 0,
-    "hackathons": 0,
-    "open_source": 0,
-    "extracurriculars": 0,
-    "show_result": False,
-    "prediction": None,
-    "probability": None,
-}
+st.title("Prédicteur d’Embauche  Maroc")
 
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+# ─────────────────────────────────────────────
+# LOAD DATASET
+# ─────────────────────────────────────────────
+DATA_PATH = "data/maroc_tech_students_dataset.csv"
 
+if not os.path.exists(DATA_PATH):
+    st.error("❌ Dataset introuvable")
+    st.stop()
 
-# ─── LOAD MODEL ──────────────────────────────────────────────
-if not os.path.exists("model.pkl"):
-    st.error("model.pkl introuvable")
+df = pd.read_csv(DATA_PATH)
+
+# ─────────────────────────────────────────────
+# LOAD MODEL + ENCODERS
+# ─────────────────────────────────────────────
+MODEL_PATH = os.path.join("model", "model.pkl")
+
+if not os.path.exists(MODEL_PATH):
+    st.error("❌ model.pkl introuvable")
     st.stop()
 
 @st.cache_resource
-def load_model():
-    return pickle.load(open("model.pkl", "rb"))
+def load_all():
+    model = pickle.load(open("model/model.pkl", "rb"))
+    le_filiere = pickle.load(open("model/le_filiere.pkl", "rb"))
+    le_ecole = pickle.load(open("model/le_ecole.pkl", "rb"))
+    le_ville = pickle.load(open("model/le_ville.pkl", "rb"))
+    return model, le_filiere, le_ecole, le_ville
 
-model = load_model()
+model, le_filiere, le_ecole, le_ville = load_all()
 
+# ─────────────────────────────────────────────
+# OPTIONS (affichage seulement)
+# ─────────────────────────────────────────────
+FILIERES = df["filiere"].unique().tolist()
+VILLES = df["ville"].unique().tolist()
+TYPE_ECOLE = df["type_ecole"].unique().tolist()
 
-# ─── UI HEADER ───────────────────────────────────────────────
-st.title("🎯 Job Hiring Predictor AI")
-
-
-# ─── INPUTS ──────────────────────────────────────────────────
-BRANCHES = ["CSE", "IT", "ECE", "Autre"]
-TIERS = [1, 2, 3]
+# ─────────────────────────────────────────────
+# UI
+# ─────────────────────────────────────────────
+st.markdown("### 👇 Remplir les informations du candidat")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.session_state.branch = st.selectbox(
-        "Filière",
-        BRANCHES,
-        index=BRANCHES.index(st.session_state.branch)
-    )
+    filiere = st.selectbox("Filière", FILIERES)
 
 with col2:
-    st.session_state.college_tier = st.selectbox(
-        "Classement établissement",
-        TIERS,
-        index=TIERS.index(st.session_state.college_tier),
-        format_func=lambda x: f"Tier {x}"
-    )
+    type_ecole = st.selectbox("Type école", TYPE_ECOLE)
 
 with col3:
-    st.session_state.cgpa = st.slider("CGPA", 0.0, 10.0, st.session_state.cgpa)
+    ville = st.selectbox("Ville", VILLES)
 
+moyenne = st.slider("Moyenne générale", 0.0, 20.0, 12.0)
+stages = st.slider("Stages", 0, 5, 0)
 
-st.session_state.backlogs = st.slider("Backlogs", 0, 10, st.session_state.backlogs)
-st.session_state.aptitude_score = st.slider("Aptitude", 0, 100, st.session_state.aptitude_score)
+niveau_francais = st.slider("Français", 0, 10, 5)
+niveau_anglais = st.slider("Anglais", 0, 10, 5)
+niveau_programmation = st.slider("Programmation", 0, 10, 5)
+niveau_algorithme = st.slider("Algorithmique", 0, 10, 5)
 
-st.session_state.coding_skills = st.slider("Coding", 0, 10, st.session_state.coding_skills)
-st.session_state.dsa_score = st.slider("DSA", 0, 100, st.session_state.dsa_score)
-st.session_state.ml_knowledge = st.slider("ML", 0, 10, st.session_state.ml_knowledge)
+projets = st.slider("Projets", 0, 10, 1)
+certifications = st.slider("Certifications", 0, 10, 0)
 
-st.session_state.system_design = st.slider("System Design", 0, 10, st.session_state.system_design)
-st.session_state.communication_skills = st.slider("Communication", 0, 10, st.session_state.communication_skills)
+participation_hackathon = st.slider("Hackathons", 0, 10, 0)
+open_source = st.slider("Open Source Contributions", 0, 10, 0)
 
-st.session_state.internships = st.slider("Internships", 0, 5, st.session_state.internships)
-st.session_state.projects_count = st.slider("Projects", 0, 10, st.session_state.projects_count)
-st.session_state.certifications = st.slider("Certifications", 0, 10, st.session_state.certifications)
-st.session_state.hackathons = st.slider("Hackathons", 0, 10, st.session_state.hackathons)
-st.session_state.open_source = st.slider("Open Source", 0, 20, st.session_state.open_source)
-st.session_state.extracurriculars = st.slider("Extra", 0, 10, st.session_state.extracurriculars)
+soft_skills = st.slider("Soft Skills", 0, 10, 5)
 
+linkedin_profile = st.selectbox("LinkedIn actif ?", ["Non", "Oui"])
 
-# ─── PREDICTION ──────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# PREDICTION
+# ─────────────────────────────────────────────
 if st.button("🔍 Predict"):
 
-    branch_map = {"CSE": 0, "IT": 1, "ECE": 2, "Autre": 3}
+    try:
+        input_data = np.array([[
+            le_filiere.transform([filiere])[0],
+            le_ecole.transform([type_ecole])[0],
+            le_ville.transform([ville])[0],
+            moyenne,
+            stages,
+            niveau_francais,
+            niveau_anglais,
+            niveau_programmation,
+            niveau_algorithme,
+            projets,
+            certifications,
+            participation_hackathon,
+            open_source,
+            soft_skills,
+            1 if linkedin_profile == "Oui" else 0
+        ]])
 
-    input_data = np.array([[
+        prediction = model.predict(input_data)[0]
+        proba = model.predict_proba(input_data)[0]
 
-        branch_map[st.session_state.branch],
-        st.session_state.college_tier,
-        st.session_state.cgpa,
-        st.session_state.backlogs,
-        st.session_state.coding_skills,
-        st.session_state.dsa_score,
-        st.session_state.aptitude_score,
-        st.session_state.communication_skills,
-        st.session_state.ml_knowledge,
-        st.session_state.system_design,
-        st.session_state.internships,
-        st.session_state.projects_count,
-        st.session_state.certifications,
-        st.session_state.hackathons,
-        st.session_state.open_source,
-        st.session_state.extracurriculars,
+        st.markdown("---")
+        st.markdown("### 📊 Résultat")
 
-    ]])
+        if prediction == 1:
+            st.success(f"✅ RECRUTÉ ({proba[1]*100:.2f}%)")
+        else:
+            st.error(f"❌ NON RECRUTÉ ({proba[0]*100:.2f}%)")
 
-    st.session_state.prediction = int(model.predict(input_data)[0])
-    st.session_state.probability = model.predict_proba(input_data)[0]
-    st.session_state.show_result = True
+        st.write("Probabilité recruté :", f"{proba[1]*100:.2f}%")
+        st.write("Probabilité non recruté :", f"{proba[0]*100:.2f}%")
 
+        # ─────────────────────────────────────────────
+        # IMPORTANCE FEATURES (ICI CORRIGÉ)
+        # ─────────────────────────────────────────────
 
-# ─── RESULT ──────────────────────────────────────────────────
-if st.session_state.show_result:
+        st.markdown("### 📊 Importance des features")
 
-    pred = st.session_state.prediction
-    prob = st.session_state.probability
+        features = [
+            "filiere", "type_ecole", "ville", "moyenne", "stages",
+            "francais", "anglais", "programmation", "algorithme",
+            "projets", "certifications", "hackathon",
+            "open_source", "soft_skills", "linkedin"
+        ]
 
-    if pred == 1:
-        st.success(f"✅ HIRED ({prob[1]*100:.2f}%)")
-    else:
-        st.error(f"❌ NOT HIRED ({prob[0]*100:.2f}%)")
+        importances = model.feature_importances_
+
+        fig = px.bar(
+            x=importances,
+            y=features,
+            orientation='h',
+            title="Importance des features",
+            labels={"x": "Importance", "y": "Features"}
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"Erreur : {e}")
