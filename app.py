@@ -14,8 +14,42 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("💼 Prédicteur d’Embauche Maroc")
+st.title("💼 Prédicteur d’Embauche Maroc 💼" )
 
+# ─────────────────────────────────────────────
+# CENTER STYLE
+# ─────────────────────────────────────────────
+st.markdown("""
+<style>
+
+/* titre */
+h1 {
+    text-align: center;
+}
+
+/* sous titres */
+h3 {
+    text-align: center;
+}
+
+/* bouton */
+div.stButton {
+    text-align: center;
+}
+
+/* résultat */
+.stAlert {
+    text-align: center;
+}
+
+/* progress bar */
+.stProgress {
+    width: 70%;
+    margin: auto;
+}
+
+</style>
+""", unsafe_allow_html=True)
 # ─────────────────────────────────────────────
 # LOAD DATASET
 # ─────────────────────────────────────────────
@@ -67,7 +101,10 @@ with col3:
 # ─────────────────────────────────────────────
 # SLIDERS
 # ─────────────────────────────────────────────
-moyenne = st.slider("Moyenne générale", 0.0, 20.0, 0.0)
+# ─────────────────────────────────────────────
+# SLIDERS
+# ─────────────────────────────────────────────
+moyenne = st.slider("Moyenne générale", 10.0, 20.0, 10.0)
 
 stages = st.slider("Stages", 0, 10, 0)
 
